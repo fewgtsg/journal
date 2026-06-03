@@ -31,7 +31,8 @@ pub fn run() {
 
                 CREATE TABLE IF NOT EXISTS goals (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+                    name TEXT NOT NULL
+                        CHECK (length(trim(name, char(9) || char(10) || char(13) || ' ')) > 0),
                     description TEXT NOT NULL DEFAULT '',
                     status TEXT NOT NULL DEFAULT '进行中'
                         CHECK (status IN ('进行中', '暂停', '已完成', '已放弃')),
@@ -53,8 +54,12 @@ pub fn run() {
                     UNIQUE (entry_id, goal_id)
                 );
 
-                CREATE INDEX IF NOT EXISTS idx_entry_goals_entry_id
-                    ON entry_goals(entry_id);
+                CREATE TRIGGER IF NOT EXISTS prevent_goals_delete
+                    BEFORE DELETE ON goals
+                BEGIN
+                    SELECT RAISE(ABORT, 'goals cannot be deleted');
+                END;
+
                 CREATE INDEX IF NOT EXISTS idx_entry_goals_goal_id
                     ON entry_goals(goal_id);
             "#,
