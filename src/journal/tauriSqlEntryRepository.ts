@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import Database from "@tauri-apps/plugin-sql";
 import type { EntryRepository } from "./entryRepository";
 import type {
@@ -86,68 +87,10 @@ export class TauriSqlEntryRepository implements EntryRepository {
     entry: EntryDraft,
     goalLinks: EntryGoalLinkDraft[],
   ): Promise<EntryWithGoals> {
-    const database = await this.database();
-    await database.execute("BEGIN IMMEDIATE");
-    try {
-      await database.execute(
-        `INSERT INTO entries (
-          date, title, body, mood, what_happened, feelings, learning, goal_relation
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT(date) DO UPDATE SET
-          title = excluded.title,
-          body = excluded.body,
-          mood = excluded.mood,
-          what_happened = excluded.what_happened,
-          feelings = excluded.feelings,
-          learning = excluded.learning,
-          goal_relation = excluded.goal_relation,
-          updated_at = CURRENT_TIMESTAMP`,
-        [
-          entry.date,
-          entry.title,
-          entry.body,
-          entry.mood,
-          entry.whatHappened,
-          entry.feelings,
-          entry.learning,
-          entry.goalRelation,
-        ],
-      );
-
-      const rows = await database.select<EntryRow[]>(
-        "SELECT * FROM entries WHERE date = $1 LIMIT 1",
-        [entry.date],
-      );
-      const savedRow = rows[0];
-      if (!savedRow) {
-        throw new Error(`Failed to load saved entry for ${entry.date}`);
-      }
-
-      await database.execute("DELETE FROM entry_goals WHERE entry_id = $1", [
-        savedRow.id,
-      ]);
-      for (const link of goalLinks) {
-        await database.execute(
-          `INSERT INTO entry_goals (entry_id, goal_id, progress_note)
-        VALUES ($1, $2, $3)`,
-          [savedRow.id, link.goalId, link.progressNote],
-        );
-      }
-
-      const persistedGoalLinks = await this.getGoalLinks(savedRow.id);
-      await database.execute("COMMIT");
-      return {
-        entry: mapEntryRow(savedRow),
-        goalLinks: persistedGoalLinks,
-      };
-    } catch (error) {
-      try {
-        await database.execute("ROLLBACK");
-      } catch {
-        // Preserve the write failure that caused the rollback attempt.
-      }
-      throw error;
-    }
+    return invoke<EntryWithGoals>("save_entry_with_goal_links", {
+      entry,
+      goalLinks,
+    });
   }
 
   private async getGoalLinks(entryId: number): Promise<EntryGoalLink[]> {

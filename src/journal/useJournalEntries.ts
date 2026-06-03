@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { EntryRepository } from "./entryRepository";
 import {
   createEmptyEntryDraft,
@@ -68,15 +68,55 @@ export function useJournalEntries(
     setDirty(true);
   }, []);
 
+  const addGoalLink = useCallback((goalId: number) => {
+    setGoalLinks((current) => {
+      if (current.some((link) => link.goalId === goalId)) return current;
+      return [...current, { goalId, progressNote: "" }];
+    });
+    setDirty(true);
+  }, []);
+
+  const removeGoalLink = useCallback((goalId: number) => {
+    setGoalLinks((current) =>
+      current.filter((link) => link.goalId !== goalId),
+    );
+    setDirty(true);
+  }, []);
+
+  const updateGoalLink = useCallback(
+    (goalId: number, changes: Partial<EntryGoalLinkDraft>) => {
+      setGoalLinks((current) =>
+        current.map((link) =>
+          link.goalId === goalId ? { ...link, ...changes } : link,
+        ),
+      );
+      setDirty(true);
+    },
+    [],
+  );
+
+  const selectedDateRef = useRef(selectedDate);
+  selectedDateRef.current = selectedDate;
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const goalLinksRef = useRef(goalLinks);
+  goalLinksRef.current = goalLinks;
+
   const saveDraft = useCallback(async () => {
     setSaving(true);
     setError(null);
+    const savedAtDate = selectedDateRef.current;
+    const snapshot = draftRef.current;
     try {
-      const saved = await repository.save(draft, goalLinks);
-      setDraft(toDraft(saved.entry));
-      setGoalLinks(saved.goalLinks.map(toGoalLinkDraft));
+      const saved = await repository.save(snapshot, goalLinksRef.current);
       setEntries(await repository.list());
-      setDirty(false);
+      const currentDraft = draftRef.current;
+      const currentDate = selectedDateRef.current;
+      if (currentDate === savedAtDate && draftsEqual(currentDraft, snapshot)) {
+        setDraft(toDraft(saved.entry));
+        setGoalLinks(saved.goalLinks.map(toGoalLinkDraft));
+        setDirty(false);
+      }
       return saved;
     } catch (cause) {
       setError(messageFrom(cause));
@@ -84,18 +124,22 @@ export function useJournalEntries(
     } finally {
       setSaving(false);
     }
-  }, [draft, goalLinks, repository]);
+  }, [repository]);
 
   return {
     entries,
     draft,
     selectedDate,
+    goalLinks,
     loading,
     saving,
     error,
     dirty,
     selectDate,
     updateDraft,
+    addGoalLink,
+    removeGoalLink,
+    updateGoalLink,
     saveDraft,
   };
 }
@@ -111,6 +155,19 @@ function toGoalLinkDraft(link: EntryGoalLink): EntryGoalLinkDraft {
     goalId: link.goalId,
     progressNote: link.progressNote,
   };
+}
+
+function draftsEqual(a: EntryDraft, b: EntryDraft): boolean {
+  return (
+    a.date === b.date &&
+    a.title === b.title &&
+    a.body === b.body &&
+    a.mood === b.mood &&
+    a.whatHappened === b.whatHappened &&
+    a.feelings === b.feelings &&
+    a.learning === b.learning &&
+    a.goalRelation === b.goalRelation
+  );
 }
 
 function messageFrom(cause: unknown): string {

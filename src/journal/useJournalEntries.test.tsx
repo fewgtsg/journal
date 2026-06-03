@@ -258,4 +258,88 @@ describe("useJournalEntries", () => {
     expect(result.current.draft.date).toBe("2026-06-04");
     expect(result.current.draft.body).toBe("");
   });
+
+  it("adds, updates, and removes goal links", async () => {
+    const repository = new InMemoryEntryRepository();
+    const { result } = renderHook(() =>
+      useJournalEntries(repository, "2026-06-03"),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.addGoalLink(1);
+    });
+    expect(result.current.goalLinks).toEqual([
+      { goalId: 1, progressNote: "" },
+    ]);
+    expect(result.current.dirty).toBe(true);
+
+    act(() => {
+      result.current.updateGoalLink(1, { progressNote: "开始设计数据库。" });
+    });
+    expect(result.current.goalLinks).toEqual([
+      { goalId: 1, progressNote: "开始设计数据库。" },
+    ]);
+
+    act(() => {
+      result.current.addGoalLink(2);
+    });
+    expect(result.current.goalLinks).toHaveLength(2);
+
+    act(() => {
+      result.current.removeGoalLink(1);
+    });
+    expect(result.current.goalLinks).toEqual([
+      { goalId: 2, progressNote: "" },
+    ]);
+
+    await act(async () => {
+      await result.current.saveDraft();
+    });
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it("prevents duplicate goal links", async () => {
+    const repository = new InMemoryEntryRepository();
+    const { result } = renderHook(() =>
+      useJournalEntries(repository, "2026-06-03"),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.addGoalLink(1);
+      result.current.addGoalLink(1);
+    });
+    expect(result.current.goalLinks).toHaveLength(1);
+  });
+
+  it("preserves goal link edits when saving fails", async () => {
+    const repository = new InMemoryEntryRepository();
+    vi.spyOn(repository, "save").mockRejectedValueOnce(
+      new Error("database unavailable"),
+    );
+    const { result } = renderHook(() =>
+      useJournalEntries(repository, "2026-06-03"),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.addGoalLink(1);
+      result.current.updateGoalLink(1, { progressNote: "笔记内容" });
+    });
+
+    await act(async () => {
+      await expect(result.current.saveDraft()).rejects.toThrow(
+        "database unavailable",
+      );
+    });
+
+    expect(result.current.goalLinks).toEqual([
+      { goalId: 1, progressNote: "笔记内容" },
+    ]);
+    expect(result.current.dirty).toBe(true);
+  });
 });
