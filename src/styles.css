@@ -749,3 +749,317 @@ button {
     width: 100%;
   }
 }
+
+.goalsView {
+  min-width: 0;
+  max-width: 880px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 44px 34px;
+}
+
+.goalsViewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e1e5e0;
+}
+
+.filterPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filterPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  border: 1px solid #d2dcd1;
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #68776a;
+  background: #f7faf6;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.filterPill.active {
+  border-color: #8eaa9a;
+  color: #315e4f;
+  background: #e8f0ec;
+}
+
+.goalsViewBody {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.4fr);
+  gap: 32px;
+}
+
+.goalsViewList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.goalListItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  border: 1px solid #d9dfd9;
+  border-radius: 7px;
+  padding: 11px;
+  text-align: left;
+  color: #2a302c;
+  background: #f8faf7;
+  cursor: pointer;
+}
+
+.goalListItem:hover {
+  background: #f1f4f0;
+}
+
+.goalListItem.selected {
+  border-color: #4f8f78;
+  background: #e8f0ec;
+}
+
+.goalListItemName {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.goalListItemMeta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.goalDetailForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timelineSection {
+  margin-top: 28px;
+  border-top: 1px solid #e1e5e0;
+  padding-top: 20px;
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.timelineItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  border: 1px solid #d9dfd9;
+  border-radius: 7px;
+  padding: 12px;
+  text-align: left;
+  color: #2a302c;
+  background: #f8faf7;
+  cursor: pointer;
+}
+
+.timelineItem:hover {
+  background: #f1f4f0;
+}
+
+.timelineItemDate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #7f8981;
+}
+
+.timelineItemTitle {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #2a302c;
+}
+
+.timelineItemExcerpt {
+  font-size: 12px;
+  color: #68736b;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.timelineItemMeta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.timelineItemNote {
+  font-size: 11px;
+  color: #4f8f78;
+  background: #eef1ed;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1.45;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #8a948c;
+  font-size: 13px;
+  text-align: center;
+}
+
+.field select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #e0e4df;
+  border-radius: 7px;
+  outline: 0;
+  color: #2a302c;
+  background: #fff;
+  line-height: 1.65;
+  padding: 7px 11px;
+  font-size: 14px;
+}
+
+.field select:focus {
+  border-color: #8eaa9a;
+  box-shadow: 0 0 0 3px rgba(79, 143, 120, 0.1);
+}
+
+.field select:disabled {
+  color: #7f8981;
+  background: #f4f6f3;
+}
+
+.appShell[data-view="goals"] {
+  grid-template-columns: minmax(230px, 270px) 1fr;
+}
+
+.goalAddMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #d5dbd5;
+  border-radius: 8px;
+  padding: 6px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.goalAddMenu button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 8px;
+  text-align: left;
+  color: #2a302c;
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.goalAddMenu button:hover {
+  background: #f1f4f0;
+}
+
+.linkedGoalItem {
+  position: relative;
+}
+
+.goalNameButton {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  font-size: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.goalNameButton:hover strong {
+  color: #315e4f;
+  text-decoration: underline;
+}
+
+.linkProgressField {
+  display: grid;
+  gap: 5px;
+  margin: 8px 0 0 14px;
+}
+
+.linkProgressField span {
+  color: #8a948c;
+  font-size: 11px;
+}
+
+.linkProgressField input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #e0e4df;
+  border-radius: 6px;
+  padding: 6px 9px;
+  outline: 0;
+  color: #2a302c;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.linkProgressField input:focus {
+  border-color: #8eaa9a;
+  box-shadow: 0 0 0 3px rgba(79, 143, 120, 0.1);
+}
+
+@media (max-width: 1120px) {
+  .appShell[data-view="goals"] {
+    grid-template-columns: minmax(220px, 250px) 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .goalsView {
+    padding: 20px 16px 28px;
+  }
+
+  .goalsViewBody {
+    grid-template-columns: 1fr;
+  }
+
+  .appShell[data-view="goals"] {
+    display: block;
+  }
+}
