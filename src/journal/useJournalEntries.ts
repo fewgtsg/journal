@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import type { EntryRepository } from "./entryRepository";
-import { createEmptyEntryDraft, type Entry, type EntryDraft } from "./types";
+import {
+  createEmptyEntryDraft,
+  type Entry,
+  type EntryDraft,
+  type EntryGoalLink,
+  type EntryGoalLinkDraft,
+} from "./types";
 
 export function useJournalEntries(
   repository: EntryRepository,
@@ -11,6 +17,7 @@ export function useJournalEntries(
   const [draft, setDraft] = useState<EntryDraft>(() =>
     createEmptyEntryDraft(initialDate),
   );
+  const [goalLinks, setGoalLinks] = useState<EntryGoalLinkDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +40,9 @@ export function useJournalEntries(
           selectedEntry
             ? toDraft(selectedEntry.entry)
             : createEmptyEntryDraft(selectedDate),
+        );
+        setGoalLinks(
+          selectedEntry ? selectedEntry.goalLinks.map(toGoalLinkDraft) : [],
         );
         setDirty(false);
       } catch (cause) {
@@ -62,8 +72,9 @@ export function useJournalEntries(
     setSaving(true);
     setError(null);
     try {
-      const saved = await repository.save(draft, []);
+      const saved = await repository.save(draft, goalLinks);
       setDraft(toDraft(saved.entry));
+      setGoalLinks(saved.goalLinks.map(toGoalLinkDraft));
       setEntries(await repository.list());
       setDirty(false);
       return saved;
@@ -73,7 +84,7 @@ export function useJournalEntries(
     } finally {
       setSaving(false);
     }
-  }, [draft, repository]);
+  }, [draft, goalLinks, repository]);
 
   return {
     entries,
@@ -93,6 +104,13 @@ function toDraft(entry: Entry): EntryDraft {
   const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...draft } =
     entry;
   return draft;
+}
+
+function toGoalLinkDraft(link: EntryGoalLink): EntryGoalLinkDraft {
+  return {
+    goalId: link.goalId,
+    progressNote: link.progressNote,
+  };
 }
 
 function messageFrom(cause: unknown): string {

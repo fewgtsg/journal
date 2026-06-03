@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { EntryRepository } from "./entryRepository";
 import type {
   Entry,
   EntryDraft,
+  EntryGoalLink,
   EntryGoalLinkDraft,
   EntryWithGoals,
 } from "./types";
@@ -13,9 +14,16 @@ import { useJournalEntries } from "./useJournalEntries";
 
 class InMemoryEntryRepository implements EntryRepository {
   private entries: Entry[] = [];
+  private goalLinks = new Map<string, EntryGoalLink[]>();
 
-  constructor(initialEntries: Entry[] = []) {
+  constructor(
+    initialEntries: Entry[] = [],
+    initialGoalLinks: EntryGoalLink[] = [],
+  ) {
     this.entries = initialEntries;
+    for (const entry of initialEntries) {
+      this.goalLinks.set(entry.date, initialGoalLinks);
+    }
   }
 
   async list(): Promise<Entry[]> {
@@ -24,12 +32,14 @@ class InMemoryEntryRepository implements EntryRepository {
 
   async getByDate(date: string): Promise<EntryWithGoals | null> {
     const entry = this.entries.find((candidate) => candidate.date === date);
-    return entry ? { entry, goalLinks: [] } : null;
+    return entry
+      ? { entry, goalLinks: this.goalLinks.get(date) ?? [] }
+      : null;
   }
 
   async save(
     draft: EntryDraft,
-    _goalLinks: EntryGoalLinkDraft[],
+    goalLinks: EntryGoalLinkDraft[],
   ): Promise<EntryWithGoals> {
     const existing = await this.getByDate(draft.date);
     const saved: Entry = {
@@ -43,7 +53,14 @@ class InMemoryEntryRepository implements EntryRepository {
       ...this.entries.filter((entry) => entry.date !== draft.date),
       saved,
     ];
-    return { entry: saved, goalLinks: [] };
+    const persistedGoalLinks = goalLinks.map((link) => ({
+      ...link,
+      goalName: "发布个人成长应用",
+      goalStatus: "进行中" as const,
+      goalStage: "MVP 开发",
+    }));
+    this.goalLinks.set(draft.date, persistedGoalLinks);
+    return { entry: saved, goalLinks: persistedGoalLinks };
   }
 }
 
@@ -59,6 +76,14 @@ const savedEntry: Entry = {
   goalRelation: "推动了 MVP 设计。",
   createdAt: "2026-06-03T10:00:00.000Z",
   updatedAt: "2026-06-03T10:00:00.000Z",
+};
+
+const savedGoalLink: EntryGoalLink = {
+  goalId: 2,
+  progressNote: "完成 SQLite 持久化。",
+  goalName: "发布个人成长应用",
+  goalStatus: "进行中",
+  goalStage: "MVP 开发",
 };
 
 describe("useJournalEntries", () => {
@@ -104,5 +129,63 @@ describe("useJournalEntries", () => {
       title: "新的记录",
       mood: "平静",
     });
+  });
+
+  it("preserves loaded goal links when saving an edited entry", async () => {
+    const repository = new InMemoryEntryRepository([savedEntry], [savedGoalLink]);
+    const save = vi.spyOn(repository, "save");
+    const { result } = renderHook(() =>
+      useJournalEntries(repository, "2026-06-03"),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.updateDraft({ body: "今天继续推进了产品。" });
+    });
+    await act(async () => {
+      await result.current.saveDraft();
+    });
+
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({ body: "今天继续推进了产品。" }),
+      [{ goalId: 2, progressNote: "完成 SQLite 持久化。" }],
+    );
+    await expect(repository.getByDate("2026-06-03")).resolves.toMatchObject({
+      goalLinks: [savedGoalLink],
+    });
+  });
+
+  it("keeps loaded goal links internally when saving fails", async () => {
+    const repository = new InMemoryEntryRepository([savedEntry], [savedGoalLink]);
+    const save = vi
+      .spyOn(repository, "save")
+      .mockRejectedValueOnce(new Error("database unavailable"));
+    const { result } = renderHook(() =>
+      useJournalEntries(repository, "2026-06-03"),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.updateDraft({ body: "第一次编辑" });
+    });
+    await act(async () => {
+      await expect(result.current.saveDraft()).rejects.toThrow(
+        "database unavailable",
+      );
+    });
+
+    act(() => {
+      result.current.updateDraft({ body: "第二次编辑" });
+    });
+    await act(async () => {
+      await result.current.saveDraft();
+    });
+
+    expect(save).toHaveBeenLastCalledWith(
+      expect.objectContaining({ body: "第二次编辑" }),
+      [{ goalId: 2, progressNote: "完成 SQLite 持久化。" }],
+    );
   });
 });
