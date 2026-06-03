@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import {
   Brain,
   CalendarDays,
@@ -123,7 +123,7 @@ function App() {
             {moods.map((mood) => (
               <button
                 className={mood.label === selectedMood ? "mood active" : "mood"}
-                style={{ "--mood-color": mood.tone } as React.CSSProperties}
+                style={{ "--mood-color": mood.tone } as CSSProperties}
                 type="button"
                 key={mood.label}
                 onClick={() => {
