@@ -1044,6 +1044,90 @@ button {
   box-shadow: 0 0 0 3px rgba(79, 143, 120, 0.1);
 }
 
+.aiSettingsForm {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  border: 1px solid #d5dbd5;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8faf7;
+}
+
+.aiSettingsForm label {
+  display: grid;
+  gap: 4px;
+}
+
+.aiSettingsForm label span {
+  color: #707a72;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.aiSettingsForm input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #e0e4df;
+  border-radius: 6px;
+  padding: 6px 9px;
+  outline: 0;
+  color: #2a302c;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.aiSettingsForm input:focus {
+  border-color: #8eaa9a;
+  box-shadow: 0 0 0 3px rgba(79, 143, 120, 0.1);
+}
+
+.aiSettingsActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.quietButton {
+  min-height: 30px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 12px;
+  color: #667169;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.quietButton:hover {
+  color: #315e4f;
+  background: #e5ebe5;
+}
+
+.aiError {
+  margin: 10px 0 0;
+  border: 1px solid #e2c4bf;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #8c453c;
+  background: #fbf2f0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 @media (max-width: 1120px) {
   .appShell[data-view="goals"] {
     grid-template-columns: minmax(220px, 250px) 1fr;

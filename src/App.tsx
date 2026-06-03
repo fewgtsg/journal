@@ -77,6 +77,7 @@ function App() {
             goals={goals.goals}
             linkedGoals={journal.goalLinks}
             candidates={candidates}
+            draft={journal.draft}
             onAddGoal={journal.addGoalLink}
             onRemoveGoal={journal.removeGoalLink}
             onUpdateGoalLink={journal.updateGoalLink}

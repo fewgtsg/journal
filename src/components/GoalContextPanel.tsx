@@ -2,21 +2,25 @@ import { useState } from "react";
 import {
   Brain,
   Goal as GoalIcon,
+  Loader2,
   Plus,
+  Settings,
   Sparkles,
   X,
 } from "lucide-react";
+import { loadAIConfig, saveAIConfig, type AIConfig } from "../ai/config";
 import {
-  aiQuestions,
-  aiSuggestions,
-} from "../data/previewData";
+  generateFollowUpQuestions,
+  type AIFollowUpResponse,
+} from "../ai/aiService";
 import type { Goal } from "../goals/types";
-import type { EntryGoalLinkDraft } from "../journal/types";
+import type { EntryDraft, EntryGoalLinkDraft } from "../journal/types";
 
 type GoalContextPanelProps = {
   goals: Goal[];
   linkedGoals: EntryGoalLinkDraft[];
   candidates: Goal[];
+  draft: EntryDraft;
   onAddGoal: (goalId: number) => void;
   onRemoveGoal: (goalId: number) => void;
   onUpdateGoalLink: (
@@ -30,15 +34,49 @@ export function GoalContextPanel({
   goals,
   linkedGoals,
   candidates,
+  draft,
   onAddGoal,
   onRemoveGoal,
   onUpdateGoalLink,
   onOpenGoal,
 }: GoalContextPanelProps) {
-  const [showQuestions, setShowQuestions] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
 
+  const [aiConfig, setAiConfig] = useState<AIConfig | null>(loadAIConfig);
+  const [showSettings, setShowSettings] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<AIFollowUpResponse | null>(null);
+
   const goalMap = new Map(goals.map((g) => [g.id, g]));
+
+  async function handleGenerate() {
+    if (!aiConfig) {
+      setShowSettings(true);
+      return;
+    }
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const result = await generateFollowUpQuestions(
+        aiConfig,
+        draft,
+        linkedGoals,
+        goals,
+      );
+      setAiResult(result);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  function handleSaveConfig(form: AIConfig) {
+    saveAIConfig(form);
+    setAiConfig(form);
+    setShowSettings(false);
+  }
 
   return (
     <aside className="contextPanel">
@@ -73,7 +111,10 @@ export function GoalContextPanel({
                         setShowMenu(false);
                       }}
                     >
-                      <span className="goalDot" style={{ background: "#4f8f78" }} />
+                      <span
+                        className="goalDot"
+                        style={{ background: "#4f8f78" }}
+                      />
                       <span>{goal.name}</span>
                       <span className="optionalTag">{goal.status}</span>
                     </button>
@@ -150,23 +191,56 @@ export function GoalContextPanel({
             <Brain size={17} strokeWidth={1.8} aria-hidden="true" />
             <h3>AI 复盘</h3>
           </div>
-          <span className="optionalTag">可选</span>
+          <button
+            className="quietIcon"
+            type="button"
+            aria-label="配置 AI"
+            title="配置 AI"
+            onClick={() => setShowSettings((s) => !s)}
+          >
+            <Settings size={14} aria-hidden="true" />
+          </button>
         </div>
+
+        {showSettings && (
+          <AISettingsForm
+            initial={
+              aiConfig ?? {
+                apiKey: "",
+                baseUrl: "https://api.openai.com/v1",
+                model: "gpt-4o-mini",
+              }
+            }
+            onSave={handleSaveConfig}
+            onCancel={() => setShowSettings(false)}
+          />
+        )}
 
         <button
           className="aiButton"
           type="button"
-          onClick={() => setShowQuestions((current) => !current)}
+          onClick={handleGenerate}
+          disabled={aiLoading}
         >
-          <Sparkles size={16} aria-hidden="true" />
-          {showQuestions ? "收起追问" : "生成温柔追问"}
+          {aiLoading ? (
+            <Loader2 size={16} className="spin" aria-hidden="true" />
+          ) : (
+            <Sparkles size={16} aria-hidden="true" />
+          )}
+          {aiLoading
+            ? "正在生成中…"
+            : aiConfig
+              ? "生成温柔追问"
+              : "生成温柔追问（需先配置）"}
         </button>
 
-        {showQuestions && (
+        {aiError && <p className="aiError">{aiError}</p>}
+
+        {aiResult && (
           <>
             <div className="questionList">
-              {aiQuestions.map((question, index) => (
-                <button type="button" key={question}>
+              {aiResult.questions.map((question, index) => (
+                <button type="button" key={index}>
                   <span>{index + 1}</span>
                   {question}
                 </button>
@@ -176,7 +250,7 @@ export function GoalContextPanel({
             <div className="suggestionGroup">
               <p className="fieldLabel">可能的主题</p>
               <div className="chips">
-                {aiSuggestions.themes.map((theme) => (
+                {aiResult.themes.map((theme) => (
                   <button type="button" key={theme}>
                     {theme}
                   </button>
@@ -186,12 +260,77 @@ export function GoalContextPanel({
 
             <div className="takeaway">
               <p className="fieldLabel">今日收获建议</p>
-              <blockquote>{aiSuggestions.takeaway}</blockquote>
-              <button type="button">采用这条收获</button>
+              <blockquote>{aiResult.takeaway}</blockquote>
             </div>
           </>
         )}
+
+        {!aiResult && !aiError && !showSettings && !aiConfig && (
+          <p className="emptyList" style={{ marginTop: 12 }}>
+            点击上方齿轮配置 OpenAI 兼容 API 后，AI
+            会根据你的日记内容和目标进度生成温柔追问。
+          </p>
+        )}
       </section>
     </aside>
+  );
+}
+
+function AISettingsForm({
+  initial,
+  onSave,
+  onCancel,
+}: {
+  initial: AIConfig;
+  onSave: (config: AIConfig) => void;
+  onCancel: () => void;
+}) {
+  const [form, setForm] = useState(initial);
+
+  return (
+    <form
+      className="aiSettingsForm"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave(form);
+      }}
+    >
+      <label>
+        <span>API Key</span>
+        <input
+          type="password"
+          value={form.apiKey}
+          placeholder="sk-..."
+          onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
+          required
+        />
+      </label>
+      <label>
+        <span>Base URL</span>
+        <input
+          value={form.baseUrl}
+          placeholder="https://api.openai.com/v1"
+          onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
+          required
+        />
+      </label>
+      <label>
+        <span>模型</span>
+        <input
+          value={form.model}
+          placeholder="gpt-4o-mini"
+          onChange={(e) => setForm({ ...form, model: e.target.value })}
+          required
+        />
+      </label>
+      <div className="aiSettingsActions">
+        <button type="button" className="quietButton" onClick={onCancel}>
+          取消
+        </button>
+        <button type="submit" className="primaryButton">
+          保存
+        </button>
+      </div>
+    </form>
   );
 }
