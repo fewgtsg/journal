@@ -35,7 +35,8 @@ button {
 .appShell {
   display: grid;
   grid-template-columns: minmax(230px, 270px) minmax(520px, 1fr) minmax(280px, 330px);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #f7f8f6;
 }
 
@@ -50,11 +51,14 @@ button {
   flex-direction: column;
   border-right: 1px solid #d8ddd7;
   padding: 20px 16px 16px;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .contextPanel {
   border-left: 1px solid #d8ddd7;
   padding: 22px 18px;
+  height: 100%;
   overflow-y: auto;
 }
 
@@ -317,6 +321,8 @@ button {
   width: 100%;
   margin: 0 auto;
   padding: 28px 44px 34px;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .editorHeader,
@@ -756,6 +762,8 @@ button {
   width: 100%;
   margin: 0 auto;
   padding: 28px 44px 34px;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .goalsViewHeader {
