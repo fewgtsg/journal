@@ -5,12 +5,12 @@ import {
   TauriSqlEntryRepository,
 } from "./tauriSqlEntryRepository";
 
-const { database, loadDatabase } = vi.hoisted(() => ({
+const { database, loadDatabase, invoke } = vi.hoisted(() => ({
   database: {
     select: vi.fn(),
-    execute: vi.fn(),
   },
   loadDatabase: vi.fn(),
+  invoke: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/plugin-sql", () => ({
@@ -18,6 +18,8 @@ vi.mock("@tauri-apps/plugin-sql", () => ({
     load: loadDatabase,
   },
 }));
+
+vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 
 const entryRow = {
   id: 7,
@@ -127,102 +129,25 @@ describe("TauriSqlEntryRepository", () => {
     expect(database.select).toHaveBeenCalledTimes(1);
   });
 
-  it("replaces goal links inside one immediate transaction", async () => {
-    database.execute.mockResolvedValue({ lastInsertId: 0, rowsAffected: 1 });
-    database.select
-      .mockResolvedValueOnce([entryRow])
-      .mockResolvedValueOnce([goalLinkRow]);
+  it("saves an entry and its goal links with one Tauri command", async () => {
+    const saved = {
+      entry: mapEntryRow(entryRow),
+      goalLinks: [mapEntryGoalRow(goalLinkRow)],
+    };
+    invoke.mockResolvedValue(saved);
     const repository = new TauriSqlEntryRepository();
 
     await expect(
       repository.save(draft, [
         { goalId: 2, progressNote: goalLinkRow.progress_note },
       ]),
-    ).resolves.toEqual({
-      entry: mapEntryRow(entryRow),
-      goalLinks: [mapEntryGoalRow(goalLinkRow)],
+    ).resolves.toEqual(saved);
+
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke).toHaveBeenCalledWith("save_entry_with_goal_links", {
+      entry: draft,
+      goalLinks: [{ goalId: 2, progressNote: goalLinkRow.progress_note }],
     });
-
-    expect(database.execute.mock.calls).toEqual([
-      ["BEGIN IMMEDIATE"],
-      [
-        expect.stringContaining("INSERT INTO entries"),
-        [
-          draft.date,
-          draft.title,
-          draft.body,
-          draft.mood,
-          draft.whatHappened,
-          draft.feelings,
-          draft.learning,
-          draft.goalRelation,
-        ],
-      ],
-      ["DELETE FROM entry_goals WHERE entry_id = $1", [entryRow.id]],
-      [
-        `INSERT INTO entry_goals (entry_id, goal_id, progress_note)
-        VALUES ($1, $2, $3)`,
-        [entryRow.id, 2, goalLinkRow.progress_note],
-      ],
-      ["COMMIT"],
-    ]);
-    expect(database.select.mock.calls).toEqual([
-      ["SELECT * FROM entries WHERE date = $1 LIMIT 1", [draft.date]],
-      [
-        expect.stringContaining("WHERE entry_goals.entry_id = $1"),
-        [entryRow.id],
-      ],
-    ]);
-    const executeOrder = database.execute.mock.invocationCallOrder;
-    const selectOrder = database.select.mock.invocationCallOrder;
-    expect([
-      executeOrder[0],
-      executeOrder[1],
-      selectOrder[0],
-      executeOrder[2],
-      executeOrder[3],
-      selectOrder[1],
-      executeOrder[4],
-    ]).toEqual([...executeOrder, ...selectOrder].sort((a, b) => a - b));
-  });
-
-  it("rolls back and rethrows when a goal link insert fails", async () => {
-    const insertError = new Error("foreign key constraint failed");
-    database.execute
-      .mockResolvedValueOnce({ lastInsertId: 0, rowsAffected: 0 })
-      .mockResolvedValueOnce({ lastInsertId: 0, rowsAffected: 1 })
-      .mockResolvedValueOnce({ lastInsertId: 0, rowsAffected: 1 })
-      .mockRejectedValueOnce(insertError)
-      .mockResolvedValueOnce({ lastInsertId: 0, rowsAffected: 0 });
-    database.select.mockResolvedValueOnce([entryRow]);
-    const repository = new TauriSqlEntryRepository();
-
-    await expect(
-      repository.save(draft, [
-        { goalId: 2, progressNote: "有效链接" },
-        { goalId: 99, progressNote: "无效链接" },
-      ]),
-    ).rejects.toBe(insertError);
-
-    expect(
-      database.execute.mock.calls[database.execute.mock.calls.length - 1],
-    ).toEqual(["ROLLBACK"]);
-    expect(database.execute).not.toHaveBeenCalledWith("COMMIT");
-  });
-
-  it("preserves the original write error when rollback also fails", async () => {
-    const insertError = new Error("foreign key constraint failed");
-    database.execute
-      .mockResolvedValueOnce({ lastInsertId: 0, rowsAffected: 0 })
-      .mockResolvedValueOnce({ lastInsertId: 0, rowsAffected: 1 })
-      .mockResolvedValueOnce({ lastInsertId: 0, rowsAffected: 1 })
-      .mockRejectedValueOnce(insertError)
-      .mockRejectedValueOnce(new Error("rollback failed"));
-    database.select.mockResolvedValueOnce([entryRow]);
-    const repository = new TauriSqlEntryRepository();
-
-    await expect(
-      repository.save(draft, [{ goalId: 99, progressNote: "无效链接" }]),
-    ).rejects.toBe(insertError);
+    expect(loadDatabase).not.toHaveBeenCalled();
   });
 });

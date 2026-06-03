@@ -12,6 +12,14 @@ import type {
 } from "./types";
 import { useJournalEntries } from "./useJournalEntries";
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 class InMemoryEntryRepository implements EntryRepository {
   private entries: Entry[] = [];
   private goalLinks = new Map<string, EntryGoalLink[]>();
@@ -187,5 +195,67 @@ describe("useJournalEntries", () => {
       expect.objectContaining({ body: "第二次编辑" }),
       [{ goalId: 2, progressNote: "完成 SQLite 持久化。" }],
     );
+  });
+
+  it("does not overwrite edits made while a save is pending", async () => {
+    const repository = new InMemoryEntryRepository([savedEntry], [savedGoalLink]);
+    const pendingSave = deferred<EntryWithGoals>();
+    vi.spyOn(repository, "save").mockReturnValueOnce(pendingSave.promise);
+    const { result } = renderHook(() =>
+      useJournalEntries(repository, "2026-06-03"),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.updateDraft({ body: "准备保存的内容" });
+    });
+    let savePromise!: Promise<EntryWithGoals>;
+    act(() => {
+      savePromise = result.current.saveDraft();
+    });
+    act(() => {
+      result.current.updateDraft({ body: "保存期间继续编辑" });
+    });
+    await act(async () => {
+      pendingSave.resolve({
+        entry: { ...savedEntry, body: "准备保存的内容" },
+        goalLinks: [savedGoalLink],
+      });
+      await savePromise;
+    });
+
+    expect(result.current.draft.body).toBe("保存期间继续编辑");
+    expect(result.current.dirty).toBe(true);
+  });
+
+  it("does not apply an old save result after switching dates", async () => {
+    const repository = new InMemoryEntryRepository([savedEntry], [savedGoalLink]);
+    const pendingSave = deferred<EntryWithGoals>();
+    vi.spyOn(repository, "save").mockReturnValueOnce(pendingSave.promise);
+    const { result } = renderHook(() =>
+      useJournalEntries(repository, "2026-06-03"),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let savePromise!: Promise<EntryWithGoals>;
+    act(() => {
+      savePromise = result.current.saveDraft();
+      result.current.selectDate("2026-06-04");
+    });
+    await waitFor(() => expect(result.current.selectedDate).toBe("2026-06-04"));
+    await waitFor(() => expect(result.current.draft.date).toBe("2026-06-04"));
+
+    await act(async () => {
+      pendingSave.resolve({
+        entry: { ...savedEntry, body: "旧日期保存结果" },
+        goalLinks: [savedGoalLink],
+      });
+      await savePromise;
+    });
+
+    expect(result.current.draft.date).toBe("2026-06-04");
+    expect(result.current.draft.body).toBe("");
   });
 });
