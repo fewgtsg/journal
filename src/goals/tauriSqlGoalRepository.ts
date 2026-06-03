@@ -124,7 +124,7 @@ export class TauriSqlGoalRepository implements GoalRepository {
       );
       id = result.lastInsertId;
     } else {
-      await database.execute(
+      const result = await database.execute(
         `UPDATE goals SET
           name = $1,
           description = $2,
@@ -142,6 +142,9 @@ export class TauriSqlGoalRepository implements GoalRepository {
           id,
         ],
       );
+      if (result.rowsAffected === 0) {
+        throw new Error(`Cannot update missing goal ${id}`);
+      }
     }
 
     if (id === undefined) {

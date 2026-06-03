@@ -88,6 +88,7 @@ describe("TauriSqlGoalRepository", () => {
 
     await repository.list(["进行中", "暂停"]);
 
+    expect(database.select).toHaveBeenCalledTimes(1);
     expect(database.select).toHaveBeenCalledWith(
       "SELECT * FROM goals WHERE status IN ($1, $2) ORDER BY updated_at DESC, id DESC",
       ["进行中", "暂停"],
@@ -100,6 +101,7 @@ describe("TauriSqlGoalRepository", () => {
     await expect(repository.list([])).resolves.toEqual([]);
 
     expect(database.select).not.toHaveBeenCalled();
+    expect(loadDatabase).not.toHaveBeenCalled();
   });
 
   it("loads a goal by id with a parameterized query", async () => {
@@ -131,11 +133,18 @@ describe("TauriSqlGoalRepository", () => {
     ]);
 
     expect(database.select).toHaveBeenCalledWith(
-      expect.stringContaining("ORDER BY entries.date DESC"),
+      `SELECT
+        entries.id AS entry_id,
+        entries.date,
+        entries.title,
+        entries.body,
+        entries.mood,
+        entry_goals.progress_note
+      FROM entry_goals
+      JOIN entries ON entries.id = entry_goals.entry_id
+      WHERE entry_goals.goal_id = $1
+      ORDER BY entries.date DESC`,
       [2],
-    );
-    expect(database.select.mock.calls[0][0]).toContain(
-      "JOIN entries ON entries.id = entry_goals.entry_id",
     );
   });
 
@@ -197,6 +206,24 @@ describe("TauriSqlGoalRepository", () => {
     );
   });
 
+  it("throws a clear error when updating a goal that does not exist", async () => {
+    database.execute.mockResolvedValue({ lastInsertId: 0, rowsAffected: 0 });
+    const repository = new TauriSqlGoalRepository();
+
+    await expect(
+      repository.save({
+        id: 99,
+        name: goalRow.name,
+        description: goalRow.description,
+        status: goalRow.status,
+        stage: goalRow.stage,
+        progressNote: goalRow.progress_note,
+      }),
+    ).rejects.toThrow("Cannot update missing goal 99");
+
+    expect(database.select).not.toHaveBeenCalled();
+  });
+
   it("throws when a saved goal cannot be reloaded", async () => {
     database.execute.mockResolvedValue({ lastInsertId: 2, rowsAffected: 1 });
     database.select.mockResolvedValue([]);
@@ -211,6 +238,30 @@ describe("TauriSqlGoalRepository", () => {
         progressNote: goalRow.progress_note,
       }),
     ).rejects.toThrow("Failed to load saved goal 2");
+  });
+
+  it("propagates database select errors", async () => {
+    const databaseError = new Error("database unavailable");
+    database.select.mockRejectedValue(databaseError);
+    const repository = new TauriSqlGoalRepository();
+
+    await expect(repository.get(2)).rejects.toBe(databaseError);
+  });
+
+  it("propagates database execute errors", async () => {
+    const databaseError = new Error("database is read-only");
+    database.execute.mockRejectedValue(databaseError);
+    const repository = new TauriSqlGoalRepository();
+
+    await expect(
+      repository.save({
+        name: goalRow.name,
+        description: goalRow.description,
+        status: goalRow.status,
+        stage: goalRow.stage,
+        progressNote: goalRow.progress_note,
+      }),
+    ).rejects.toBe(databaseError);
   });
 
   it("rejects invalid drafts before writing", async () => {
