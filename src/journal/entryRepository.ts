@@ -1,7 +1,15 @@
-import type { Entry, EntryDraft } from "./types";
+import type {
+  Entry,
+  EntryDraft,
+  EntryGoalLinkDraft,
+  EntryWithGoals,
+} from "./types";
 
 export interface EntryRepository {
   list(): Promise<Entry[]>;
-  getByDate(date: string): Promise<Entry | null>;
-  save(entry: EntryDraft): Promise<Entry>;
+  getByDate(date: string): Promise<EntryWithGoals | null>;
+  save(
+    entry: EntryDraft,
+    goalLinks: EntryGoalLinkDraft[],
+  ): Promise<EntryWithGoals>;
 }

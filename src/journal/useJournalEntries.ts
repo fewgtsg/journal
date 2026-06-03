@@ -31,7 +31,7 @@ export function useJournalEntries(
         setEntries(allEntries);
         setDraft(
           selectedEntry
-            ? toDraft(selectedEntry)
+            ? toDraft(selectedEntry.entry)
             : createEmptyEntryDraft(selectedDate),
         );
         setDirty(false);
@@ -62,8 +62,8 @@ export function useJournalEntries(
     setSaving(true);
     setError(null);
     try {
-      const saved = await repository.save(draft);
-      setDraft(toDraft(saved));
+      const saved = await repository.save(draft, []);
+      setDraft(toDraft(saved.entry));
       setEntries(await repository.list());
       setDirty(false);
       return saved;

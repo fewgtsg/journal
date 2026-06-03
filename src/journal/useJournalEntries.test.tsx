@@ -3,7 +3,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { EntryRepository } from "./entryRepository";
-import type { Entry, EntryDraft } from "./types";
+import type {
+  Entry,
+  EntryDraft,
+  EntryGoalLinkDraft,
+  EntryWithGoals,
+} from "./types";
 import { useJournalEntries } from "./useJournalEntries";
 
 class InMemoryEntryRepository implements EntryRepository {
@@ -17,23 +22,28 @@ class InMemoryEntryRepository implements EntryRepository {
     return [...this.entries].sort((a, b) => b.date.localeCompare(a.date));
   }
 
-  async getByDate(date: string): Promise<Entry | null> {
-    return this.entries.find((entry) => entry.date === date) ?? null;
+  async getByDate(date: string): Promise<EntryWithGoals | null> {
+    const entry = this.entries.find((candidate) => candidate.date === date);
+    return entry ? { entry, goalLinks: [] } : null;
   }
 
-  async save(draft: EntryDraft): Promise<Entry> {
+  async save(
+    draft: EntryDraft,
+    _goalLinks: EntryGoalLinkDraft[],
+  ): Promise<EntryWithGoals> {
     const existing = await this.getByDate(draft.date);
     const saved: Entry = {
       ...draft,
-      id: existing?.id ?? this.entries.length + 1,
-      createdAt: existing?.createdAt ?? "2026-06-03T10:00:00.000Z",
+      id: existing?.entry.id ?? this.entries.length + 1,
+      createdAt:
+        existing?.entry.createdAt ?? "2026-06-03T10:00:00.000Z",
       updatedAt: "2026-06-03T10:30:00.000Z",
     };
     this.entries = [
       ...this.entries.filter((entry) => entry.date !== draft.date),
       saved,
     ];
-    return saved;
+    return { entry: saved, goalLinks: [] };
   }
 }
 
