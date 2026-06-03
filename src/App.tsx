@@ -14,24 +14,41 @@ import {
 import {
   aiQuestions,
   aiSuggestions,
-  entries,
   goals,
   moods,
 } from "./data/previewData";
+import { TauriSqlEntryRepository } from "./journal/tauriSqlEntryRepository";
+import { useJournalEntries } from "./journal/useJournalEntries";
+import type { Entry } from "./journal/types";
 
 function App() {
-  const [selectedDate, setSelectedDate] = useState(entries[0].date);
-  const [selectedMood, setSelectedMood] = useState(entries[0].mood);
   const [showQuestions, setShowQuestions] = useState(true);
-  const [saved, setSaved] = useState(true);
+  const repository = useMemo(() => new TauriSqlEntryRepository(), []);
+  const today = useMemo(() => localDate(new Date()), []);
+  const {
+    entries,
+    draft,
+    selectedDate,
+    loading,
+    saving,
+    error,
+    dirty,
+    selectDate,
+    updateDraft,
+    saveDraft,
+  } = useJournalEntries(repository, today);
 
-  const selectedEntry = useMemo(
-    () => entries.find((entry) => entry.date === selectedDate) ?? entries[0],
+  const selectedWeekday = useMemo(
+    () => weekdayFor(selectedDate),
     [selectedDate],
   );
 
-  function markChanged() {
-    setSaved(false);
+  async function handleSave() {
+    try {
+      await saveDraft();
+    } catch {
+      // The hook exposes the error while preserving the draft.
+    }
   }
 
   return (
@@ -53,10 +70,10 @@ function App() {
         </label>
 
         <div className="sidebarActions">
-          <button className="todayButton" type="button" onClick={() => setSelectedDate(entries[0].date)}>
+          <button className="todayButton" type="button" onClick={() => selectDate(today)}>
             今天
           </button>
-          <button className="iconButton" type="button" aria-label="新建记录" title="新建记录">
+          <button className="iconButton" type="button" aria-label="新建今天的记录" title="新建今天的记录" onClick={() => selectDate(today)}>
             <Plus size={17} aria-hidden="true" />
           </button>
         </div>
@@ -73,20 +90,19 @@ function App() {
               className={entry.date === selectedDate ? "entryItem selected" : "entryItem"}
               type="button"
               key={entry.date}
-              onClick={() => {
-                setSelectedDate(entry.date);
-                setSelectedMood(entry.mood);
-                setSaved(true);
-              }}
+              onClick={() => selectDate(entry.date)}
             >
-              <span className="entryDate">{entry.shortDate}</span>
+              <span className="entryDate">{shortDate(entry.date)}</span>
               <span className="entryCopy">
-                <strong>{entry.title}</strong>
-                <small>{entry.weekday} · {entry.mood}</small>
-                <em>{entry.excerpt}</em>
+                <strong>{entry.title || "未命名记录"}</strong>
+                <small>{weekdayFor(entry.date)} · {entry.mood || "未选择心情"}</small>
+                <em>{excerptFor(entry)}</em>
               </span>
             </button>
           ))}
+          {!loading && entries.length === 0 && (
+            <p className="emptyList">还没有记录，从今天开始吧。</p>
+          )}
         </section>
 
         <nav className="sidebarNav" aria-label="应用导航">
@@ -108,27 +124,35 @@ function App() {
       <section className="editor" aria-label="每日记录编辑器">
         <header className="editorHeader">
           <div>
-            <p className="eyebrow">{selectedEntry.weekday}</p>
-            <h2>{selectedEntry.date}</h2>
+            <p className="eyebrow">{selectedWeekday}</p>
+            <h2>{selectedDate}</h2>
           </div>
           <div className="saveState">
-            <span className={saved ? "statusDot saved" : "statusDot"} />
-            {saved ? "已保存到本地" : "有未保存更改"}
+            <span className={!dirty && !error ? "statusDot saved" : "statusDot"} />
+            {loading
+              ? "正在加载"
+              : saving
+                ? "正在保存"
+                : error
+                  ? "保存遇到问题"
+                  : dirty
+                    ? "有未保存更改"
+                    : "已保存到本地"}
           </div>
         </header>
+        {error && <p className="errorBanner">{error}</p>}
 
         <section className="moodSection" aria-label="选择今天的心情">
           <div className="fieldLabel">今天的心情</div>
           <div className="moodRow">
             {moods.map((mood) => (
               <button
-                className={mood.label === selectedMood ? "mood active" : "mood"}
+                className={mood.label === draft.mood ? "mood active" : "mood"}
                 style={{ "--mood-color": mood.tone } as CSSProperties}
                 type="button"
                 key={mood.label}
                 onClick={() => {
-                  setSelectedMood(mood.label);
-                  markChanged();
+                  updateDraft({ mood: mood.label });
                 }}
               >
                 <span />
@@ -140,14 +164,19 @@ function App() {
 
         <label className="field titleField">
           <span>记录标题</span>
-          <input defaultValue={selectedEntry.title} onChange={markChanged} />
+          <input
+            value={draft.title}
+            onChange={(event) => updateDraft({ title: event.target.value })}
+            disabled={loading}
+          />
         </label>
 
         <label className="field writingField">
           <span>自由书写</span>
           <textarea
-            defaultValue="今天我把这个产品想得更清楚了。它不是一个普通日记，而是帮我把经历、情绪和目标放在同一个地方看见。范围变小之后，我反而更相信它真的能被做出来，也能成为我每天愿意打开的东西。"
-            onChange={markChanged}
+            value={draft.body}
+            onChange={(event) => updateDraft({ body: event.target.value })}
+            disabled={loading}
           />
         </label>
 
@@ -165,29 +194,33 @@ function App() {
           <label className="field">
             <span>今天发生了什么</span>
             <textarea
-              defaultValue="确定了第一版方向：成长复盘为主，目标进展作为上下文，AI 只做轻量辅助。"
-              onChange={markChanged}
+              value={draft.whatHappened}
+              onChange={(event) => updateDraft({ whatHappened: event.target.value })}
+              disabled={loading}
             />
           </label>
           <label className="field">
             <span>我有什么感受</span>
             <textarea
-              defaultValue="更清楚，也更踏实。产品不再只是一个模糊的想法。"
-              onChange={markChanged}
+              value={draft.feelings}
+              onChange={(event) => updateDraft({ feelings: event.target.value })}
+              disabled={loading}
             />
           </label>
           <label className="field">
             <span>我学到了什么</span>
             <textarea
-              defaultValue="产品最重要的不是功能多，而是每天打开时愿意写。"
-              onChange={markChanged}
+              value={draft.learning}
+              onChange={(event) => updateDraft({ learning: event.target.value })}
+              disabled={loading}
             />
           </label>
           <label className="field">
             <span>和目标有什么关系</span>
             <textarea
-              defaultValue="推动了“发布个人成长应用”的 MVP 设计阶段。"
-              onChange={markChanged}
+              value={draft.goalRelation}
+              onChange={(event) => updateDraft({ goalRelation: event.target.value })}
+              disabled={loading}
             />
           </label>
         </div>
@@ -197,9 +230,10 @@ function App() {
           <button
             className="primaryButton"
             type="button"
-            onClick={() => setSaved(true)}
+            onClick={handleSave}
+            disabled={loading || saving}
           >
-            保存记录
+            {saving ? "保存中" : "保存记录"}
           </button>
         </footer>
       </section>
@@ -284,3 +318,29 @@ function App() {
 }
 
 export default App;
+
+function localDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function shortDate(date: string): string {
+  return date.slice(5).replace("-", ".");
+}
+
+function weekdayFor(date: string): string {
+  return new Intl.DateTimeFormat("zh-CN", { weekday: "long" }).format(
+    new Date(`${date}T12:00:00`),
+  );
+}
+
+function excerptFor(entry: Entry): string {
+  return (
+    entry.body ||
+    entry.whatHappened ||
+    entry.learning ||
+    "这一天还没有写下内容。"
+  );
+}

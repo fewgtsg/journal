@@ -214,6 +214,13 @@ button {
   overflow-y: auto;
 }
 
+.emptyList {
+  margin: 12px 6px;
+  color: #8a948c;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .entryItem {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
@@ -356,6 +363,17 @@ button {
   font-size: 12px;
 }
 
+.errorBanner {
+  margin: 14px 0 0;
+  border: 1px solid #e2c4bf;
+  border-radius: 7px;
+  padding: 9px 11px;
+  color: #8c453c;
+  background: #fbf2f0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .statusDot {
   width: 7px;
   height: 7px;
@@ -440,6 +458,12 @@ button {
   box-shadow: 0 0 0 3px rgba(79, 143, 120, 0.1);
 }
 
+.field input:disabled,
+.field textarea:disabled {
+  color: #7f8981;
+  background: #f4f6f3;
+}
+
 .titleField input {
   min-height: 42px;
   padding: 7px 11px;
@@ -499,6 +523,11 @@ button {
   background: #315e4f;
   font-size: 13px;
   font-weight: 650;
+}
+
+.primaryButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .panelBlock + .panelBlock {

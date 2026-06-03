@@ -3,15 +3,6 @@ export type Mood = {
   tone: string;
 };
 
-export type Entry = {
-  date: string;
-  shortDate: string;
-  weekday: string;
-  title: string;
-  mood: string;
-  excerpt: string;
-};
-
 export type GoalItem = {
   name: string;
   status: string;
@@ -26,41 +17,6 @@ export const moods: Mood[] = [
   { label: "有希望", tone: "#b17832" },
   { label: "沉重", tone: "#7c7195" },
   { label: "躁动", tone: "#b45d50" },
-];
-
-export const entries: Entry[] = [
-  {
-    date: "2026-06-03",
-    shortDate: "06.03",
-    weekday: "星期三",
-    title: "方向变得清楚了",
-    mood: "清晰",
-    excerpt: "产品真正有价值的地方，是把经历、情绪和目标放在一起看见。",
-  },
-  {
-    date: "2026-06-02",
-    shortDate: "06.02",
-    weekday: "星期二",
-    title: "一点小进展",
-    mood: "平静",
-    excerpt: "完成了一次不容易的沟通，也写下了自己从中学到的事。",
-  },
-  {
-    date: "2026-06-01",
-    shortDate: "06.01",
-    weekday: "星期一",
-    title: "疲惫但诚实的开始",
-    mood: "沉重",
-    excerpt: "精力不多，但至少终于说清了自己一直在回避什么。",
-  },
-  {
-    date: "2026-05-30",
-    shortDate: "05.30",
-    weekday: "星期六",
-    title: "慢一点也没关系",
-    mood: "有希望",
-    excerpt: "我开始接受，稳定地向前比偶尔用力更重要。",
-  },
 ];
 
 export const goals: GoalItem[] = [
