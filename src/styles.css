@@ -956,7 +956,8 @@ button {
   grid-template-columns: minmax(230px, 270px) 1fr;
 }
 
-.goalAddMenu {
+.goalAddMenu,
+.moreMenu {
   position: absolute;
   top: 100%;
   right: 0;
@@ -964,7 +965,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 220px;
+  min-width: 180px;
   max-height: 240px;
   overflow-y: auto;
   border: 1px solid #d5dbd5;
@@ -974,7 +975,8 @@ button {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.goalAddMenu button {
+.goalAddMenu button,
+.moreMenu button {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -989,7 +991,8 @@ button {
   cursor: pointer;
 }
 
-.goalAddMenu button:hover {
+.goalAddMenu button:hover,
+.moreMenu button:hover {
   background: #f1f4f0;
 }
 

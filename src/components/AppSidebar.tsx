@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   CalendarDays,
   Download,
@@ -33,6 +34,8 @@ export default function AppSidebar({
   onExportMarkdown,
   onBackup,
 }: AppSidebarProps) {
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -59,7 +62,10 @@ export default function AppSidebar({
           type="button"
           aria-label="新建今天的记录"
           title="新建今天的记录"
-          onClick={onCreateEntry}
+          onClick={() => {
+            onCreateEntry();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
         >
           <Plus size={17} aria-hidden="true" />
         </button>
@@ -68,14 +74,44 @@ export default function AppSidebar({
       <section className="entryList" aria-label="最近记录">
         <div className="sectionLabel">
           <span>最近记录</span>
-          <button
-            className="quietIcon"
-            type="button"
-            aria-label="更多记录选项"
-            title="更多记录选项"
-          >
-            <MoreHorizontal size={17} aria-hidden="true" />
-          </button>
+          <div style={{ position: "relative" }}>
+            <button
+              className="quietIcon"
+              type="button"
+              aria-label="更多记录选项"
+              title="更多记录选项"
+              onClick={() => setShowMoreMenu((s) => !s)}
+            >
+              <MoreHorizontal size={17} aria-hidden="true" />
+            </button>
+            {showMoreMenu && (
+              <div
+                className="moreMenu"
+                onMouseLeave={() => setShowMoreMenu(false)}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    onExportMarkdown();
+                    setShowMoreMenu(false);
+                  }}
+                >
+                  <Download size={14} aria-hidden="true" />
+                  <span>Markdown 导出</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onBackup();
+                    setShowMoreMenu(false);
+                  }}
+                >
+                  <Settings size={14} aria-hidden="true" />
+                  <span>数据备份</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         {entries.map((entry) => (
           <button
@@ -105,14 +141,6 @@ export default function AppSidebar({
         <button type="button" onClick={() => onNavigate("goals")}>
           <Goal size={17} aria-hidden="true" />
           目标
-        </button>
-        <button type="button" onClick={onExportMarkdown}>
-          <Download size={17} aria-hidden="true" />
-          Markdown 导出
-        </button>
-        <button type="button" onClick={onBackup}>
-          <Settings size={17} aria-hidden="true" />
-          数据备份
         </button>
       </nav>
     </aside>
