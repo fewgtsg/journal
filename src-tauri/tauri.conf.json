@@ -15,10 +15,12 @@
         "title": "Journal",
         "width": 1440,
         "height": 900,
-        "minWidth": 980,
-        "minHeight": 680,
+        "minWidth": 900,
+        "minHeight": 640,
         "resizable": true,
-        "fullscreen": false
+        "center": true,
+        "fullscreen": false,
+        "decorations": true
       }
     ],
     "security": {
@@ -27,7 +29,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["deb"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -35,6 +37,16 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ],
+        "section": "utils",
+        "priority": "optional"
+      }
+    },
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }

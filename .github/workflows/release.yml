@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "ubuntu-22.04"
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: "npm"
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build and release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Journal ${{ github.ref_name }}"
+          releaseBody: |
+            **Journal** 本地优先的个人成长日记应用。
+
+            ### 安装
+            Ubuntu/Debian 用户下载 `.deb` 文件后安装：
+            ```bash
+            sudo dpkg -i journal_*.deb
+            # 如果缺少依赖
+            sudo apt-get install -f
+            ```
+
+            ### 此版本包含
+            - 日志记录与四维度复盘
+            - 目标管理与进度追踪
+            - 日记-目标关联
+            - AI 温柔追问（需配置 OpenAI 兼容 API）
+            - Markdown 导出与数据备份
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
