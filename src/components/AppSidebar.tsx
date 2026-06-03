@@ -18,6 +18,8 @@ type AppSidebarProps = {
   onSelectToday: () => void;
   onCreateEntry: () => void;
   onNavigate: (view: "journal" | "goals") => void;
+  onExportMarkdown: () => void;
+  onBackup: () => void;
 };
 
 export default function AppSidebar({
@@ -28,6 +30,8 @@ export default function AppSidebar({
   onSelectToday,
   onCreateEntry,
   onNavigate,
+  onExportMarkdown,
+  onBackup,
 }: AppSidebarProps) {
   return (
     <aside className="sidebar">
@@ -102,13 +106,13 @@ export default function AppSidebar({
           <Goal size={17} aria-hidden="true" />
           目标
         </button>
-        <button type="button">
+        <button type="button" onClick={onExportMarkdown}>
           <Download size={17} aria-hidden="true" />
           Markdown 导出
         </button>
-        <button type="button">
+        <button type="button" onClick={onBackup}>
           <Settings size={17} aria-hidden="true" />
-          设置
+          数据备份
         </button>
       </nav>
     </aside>

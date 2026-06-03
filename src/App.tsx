@@ -3,6 +3,8 @@ import AppSidebar from "./components/AppSidebar";
 import { GoalContextPanel } from "./components/GoalContextPanel";
 import { GoalsView } from "./components/GoalsView";
 import JournalView from "./components/JournalView";
+import { backupDatabase } from "./export/backup";
+import { exportAllEntriesToMarkdown } from "./export/markdownExport";
 import { TauriSqlGoalRepository } from "./goals/tauriSqlGoalRepository";
 import { isGoalLinkCandidate } from "./goals/types";
 import { useGoals } from "./goals/useGoals";
@@ -38,10 +40,25 @@ function App() {
         entries={journal.entries}
         selectedDate={journal.selectedDate}
         loading={journal.loading}
-        onSelectDate={journal.selectDate}
-        onSelectToday={() => journal.selectDate(today)}
-        onCreateEntry={() => journal.selectDate(today)}
+        onSelectDate={(date) => {
+          journal.selectDate(date);
+          setView("journal");
+        }}
+        onSelectToday={() => {
+          journal.selectDate(today);
+          setView("journal");
+        }}
+        onCreateEntry={() => {
+          journal.selectDate(today);
+          setView("journal");
+        }}
         onNavigate={setView}
+        onExportMarkdown={() => {
+          void exportAllEntriesToMarkdown(journal.entries);
+        }}
+        onBackup={() => {
+          void backupDatabase();
+        }}
       />
 
       {view === "journal" ? (
